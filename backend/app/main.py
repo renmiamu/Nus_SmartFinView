@@ -24,12 +24,19 @@ def stock_basic(ticker: str):
     change_percent = (latest_price - prev_close) / prev_close * 100
     volume = df['Volume'].iloc[-1].item()
     total_volume = df['Volume'].sum().item()
+
+    time_series = [ts.strftime('%H:%M') for ts in df.index]
+    close_series = df['Close'].iloc[:, 0].to_list()  # 如果是 DataFrame
+    print(time_series, close_series)
+
     result={
         "ticker": ticker,
         "latest_price": latest_price,
         "change_percent": change_percent,
         "volume": volume,
-        "total_volume": total_volume
+        "total_volume": total_volume,
+        "time_series": time_series,
+        "close_series": close_series,
     }
     print(result)
     return result
