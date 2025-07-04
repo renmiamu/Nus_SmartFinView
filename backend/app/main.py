@@ -27,7 +27,6 @@ def stock_basic(ticker: str):
 
     time_series = [ts.strftime('%H:%M') for ts in df.index]
     close_series = df['Close'].iloc[:, 0].to_list()  # 如果是 DataFrame
-    print(time_series, close_series)
 
     result={
         "ticker": ticker,
@@ -44,7 +43,7 @@ def stock_basic(ticker: str):
 @app.get("/stock/profit")
 def stock_profit(ticker: str, shares: float, buy_price: float):
     df = yf.download(ticker, period='1d', interval='1m')
-    current_price = df['Close'].iloc[-1].item()
+    current_price = df['Close'].dropna().iloc[-1]
     cost = shares * buy_price
     current_value = shares * current_price
     profit = current_value - cost
