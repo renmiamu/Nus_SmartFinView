@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Query
 import pandas as pd
 import yfinance as yf
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -40,21 +41,38 @@ def stock_basic(ticker: str):
     print(result)
     return result
 
-@app.get("/stock/profit")
-def stock_profit(ticker: str, shares: float, buy_price: float):
-    df = yf.download(ticker, period='1d', interval='1m')
-    current_price = df['Close'].dropna().iloc[-1]
-    cost = shares * buy_price
-    current_value = shares * current_price
-    profit = current_value - cost
-    return_pct = (profit / cost) * 100
-    return {
-        "ticker": ticker,
-        "shares": shares,
-        "buy_price": buy_price,
-        "current_price": current_price,
-        "cost": cost,
-        "current_value": current_value,
-        "profit": profit,
-        "return_pct": return_pct
-    }
+class Holding(BaseModel):
+    ticker: str
+    shares: float
+    buy_price: float
+
+@app.post("/stock/profit/batch")
+def batch_stock_profit(holdings: list[Holding]):
+    results = []
+
+    for h in holdings:
+        try:
+            df = yf.download(h.ticker, period='1d', interval='1m', progress=False)
+            if df.empty or 'Close' not in df.columns:
+                raise ValueError(f"无法获取 {h.ticker} 的数据")
+
+            current_price = df['Close'].dropna().iloc[-1]
+            cost = h.shares * h.buy_price
+            current_value = h.shares * current_price
+            profit = current_value - cost
+            return_pct = (profit / cost) * 100
+
+            results.append({
+                "ticker": h.ticker.upper(),
+                "shares": h.shares,
+                "buy_price": h.buy_price,
+                "current_price": round(float(current_price), 2),
+                "cost": round(float(cost), 2),
+                "current_value": round(float(current_value), 2),
+                "profit": round(float(profit), 2),
+                "return_pct": round(float(return_pct), 2)
+            })
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"{h.ticker} 查询失败: {str(e)}")
+
+    return results
