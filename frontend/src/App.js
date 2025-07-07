@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import StockBasic from './pages/StockBasic';
 import StockDetail from './pages/StockDetail';
 import Portfolio from './pages/Portfolio';
+import StockScore from './pages/StockScore';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/stock/:ticker" element={<StockDetail />} />
         <Route path="/stock" element={<StockBasic />} />
         <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/score" element={<StockScore />} />
       </Routes>
     </BrowserRouter>
   );

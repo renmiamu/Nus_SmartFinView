@@ -1,8 +1,11 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 import pandas as pd
 import yfinance as yf
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import torch
+import joblib
+import numpy as np
 
 
 app = FastAPI()
@@ -76,3 +79,74 @@ def batch_stock_profit(holdings: list[Holding]):
             raise HTTPException(status_code=400, detail=f"{h.ticker} 查询失败: {str(e)}")
 
     return results
+
+
+
+@app.get("/stock/score")
+def stock_score(ticker: str = Query(..., description="股票代码")):
+    # 加载特征名、scaler
+    feature_names = [
+        "marketCap", "trailingPE", "forwardPE", "priceToBook", "bookValue", "beta",
+        "dividendYield", "earningsGrowth", "revenueGrowth", "totalRevenue",
+        "grossMargins", "operatingMargins", "profitMargins", "returnOnAssets", "returnOnEquity"
+    ]
+    print("🔧 加载 scaler 中...")
+    scaler = joblib.load("/Users/hlshen/Desktop/Nus_SmartFinView/scaler.pkl")
+
+    # 定义模型结构
+    class StockRegressor(torch.nn.Module):
+        def __init__(self, input_dim):
+            super().__init__()
+            self.net = torch.nn.Sequential(
+                torch.nn.Linear(input_dim, 64),
+                torch.nn.ReLU(),
+                torch.nn.Linear(64, 32),
+                torch.nn.ReLU(),
+                torch.nn.Linear(32, 1)
+            )
+        def forward(self, x):
+            return self.net(x)
+
+    try:
+        info = yf.Ticker(ticker).info
+        for key in feature_names[:5]:
+            print(f"  - {key}: {info.get(key, None)}")
+
+        # 初始特征提取
+        features = [info.get(f, None) for f in feature_names]
+        print(features)
+
+        # 加载训练集并计算均值
+        df = pd.read_csv("/Users/hlshen/Desktop/Nus_SmartFinView/dataset/training_dataset.csv")
+        feature_means = df[feature_names].mean(numeric_only=True).to_dict()
+
+        # 用均值填补空缺或非法值
+        features = [
+            feature_means[f] if (v is None or not isinstance(v, (int, float)) or pd.isna(v)) else v
+            for v, f in zip(features, feature_names)
+        ]
+
+        # 标准化
+        x_scaled = scaler.transform([features])
+
+        # 转换为 tensor
+        x_tensor = torch.tensor(x_scaled, dtype=torch.float32)
+
+        # 加载模型
+        model = StockRegressor(input_dim=len(feature_names))
+        model.load_state_dict(torch.load("/Users/hlshen/Desktop/Nus_SmartFinView/score_model.pt", map_location='cpu'))
+        model.eval()
+
+        # 预测
+        with torch.no_grad():
+            score = model(x_tensor).item()
+
+        return {
+            "ticker": ticker.upper(),
+            "score": round(float(score), 4),
+            "features": dict(zip(feature_names, features))
+        }
+
+    except Exception as e:
+        print("❌ 出错：", e)
+        raise HTTPException(status_code=400, detail=f"无法获取特征或模型预测失败: {str(e)}")
