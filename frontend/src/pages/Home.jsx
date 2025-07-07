@@ -51,6 +51,7 @@ export default function Home() {
             进入查询
           </button>
         </div>
+
         {/* 投资组合收益可视化卡片 */}
         <div
           onClick={() => navigate('/portfolio')}
@@ -85,6 +86,7 @@ export default function Home() {
             进入组合
           </button>
         </div>
+
         {/* 智能打分卡片 */}
         <div
           onClick={() => navigate('/score')}
@@ -117,6 +119,41 @@ export default function Home() {
             onClick={e => { e.stopPropagation(); navigate('/score'); }}
           >
             进入打分
+          </button>
+        </div>
+
+        {/* 舆情情绪分析卡片 */}
+        <div
+          onClick={() => navigate('/emotion')}
+          style={{
+            background: '#fff',
+            padding: '48px 40px',
+            borderRadius: 18,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+            minWidth: 320,
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.2s',
+            border: '2px solid #f97316'
+          }}
+        >
+          <h2 style={{ color: '#f97316', marginBottom: 24 }}>舆情情绪分析</h2>
+          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
+            输入关键词，分析社交媒体与新闻情绪倾向
+          </div>
+          <button
+            style={{
+              background: '#f97316',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '10px 32px',
+              fontSize: 16,
+              cursor: 'pointer'
+            }}
+            onClick={e => { e.stopPropagation(); navigate('/emotion'); }}
+          >
+            进入分析
           </button>
         </div>
       </div>

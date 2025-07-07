@@ -6,6 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import torch
 import joblib
 import numpy as np
+import tweepy
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from collections import Counter
+import re
 
 
 app = FastAPI()
@@ -150,3 +154,54 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
     except Exception as e:
         print("❌ 出错：", e)
         raise HTTPException(status_code=400, detail=f"无法获取特征或模型预测失败: {str(e)}")
+    
+
+@app.get("/stock/emotion")
+def stock_emotion(keyword: str):
+    BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAITI2wEAAAAA2LljYwgcTLpwwatxzyXzYK%2F9Qos%3DsfnzN8gkDp91qqOyCEFQqCNSvuuS0RdXHUfTBcRxb6HeKcYKfe"
+    client = tweepy.Client(bearer_token=BEARER_TOKEN)
+    query = f"{keyword} lang:en -is:retweet"
+    try:
+        tweets = client.search_recent_tweets(query=query, max_results=50, tweet_fields=["text"])
+        tweet_texts = [tweet.text for tweet in tweets.data] if tweets.data else []
+        print(f"抓取到{len(tweet_texts)}条推文")
+    except tweepy.TooManyRequests:
+        raise HTTPException(status_code=429, detail="Twitter API 请求过多，请稍后再试")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取推文失败: {str(e)}")
+
+    analyzer = SentimentIntensityAnalyzer()
+    results = []
+    all_words = []
+    for text in tweet_texts:
+        score = analyzer.polarity_scores(text)
+        results.append(score)
+        words = [w.lower() for w in text.split() if w.isalpha()]
+        all_words.extend(words)
+    word_freq = Counter(all_words).most_common(30)
+    avg_compound = sum(r['compound'] for r in results) / len(results) if results else 0
+
+    if avg_compound >= 0.5:
+        level = "Very Positive"
+        suggestion = "🔥 极度正面情绪，市场过热，建议保持谨慎"
+    elif avg_compound >= 0.15:
+        level = "Positive"
+        suggestion = "✅ 偏正面情绪，信心增强，可适当关注买入机会"
+    elif avg_compound >= -0.15:
+        level = "Neutral"
+        suggestion = "⚖️ 情绪中性，建议观望，等待更明确信号"
+    elif avg_compound >= -0.5:
+        level = "Negative"
+        suggestion = "⚠️ 市场悲观，宜谨慎观望或小仓位试探"
+    else:
+        level = "Very Negative"
+        suggestion = "❗ 恐慌情绪显著，关注潜在反转机会"
+    
+    return {
+        "keyword": keyword,
+        "tweet_count": len(tweet_texts),
+        "avg_compound": round(avg_compound, 4),
+        "emotion_level": level,
+        "suggestion": suggestion,
+        "top_words": [{"word": w, "count": c} for w, c in word_freq]
+    }

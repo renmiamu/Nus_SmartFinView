@@ -5,6 +5,7 @@ import StockBasic from './pages/StockBasic';
 import StockDetail from './pages/StockDetail';
 import Portfolio from './pages/Portfolio';
 import StockScore from './pages/StockScore';
+import StockEmotion from './pages/StockEmotion';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/stock" element={<StockBasic />} />
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="/score" element={<StockScore />} />
+        <Route path="/emotion" element={<StockEmotion />} />
       </Routes>
     </BrowserRouter>
   );
