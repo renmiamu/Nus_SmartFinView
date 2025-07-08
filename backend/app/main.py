@@ -10,6 +10,7 @@ import tweepy
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from collections import Counter
 import re
+from requests import get
 
 
 app = FastAPI()
@@ -158,22 +159,23 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
 
 @app.get("/stock/emotion")
 def stock_emotion(keyword: str):
-    BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAITI2wEAAAAA2LljYwgcTLpwwatxzyXzYK%2F9Qos%3DsfnzN8gkDp91qqOyCEFQqCNSvuuS0RdXHUfTBcRxb6HeKcYKfe"
-    client = tweepy.Client(bearer_token=BEARER_TOKEN)
-    query = f"{keyword} lang:en -is:retweet"
+    API_KEY = "e33e6d925ce416416e1ee5b44ce8c7b9"
+    url = f"https://gnews.io/api/v4/search?q={keyword}&lang=en&max=50&token={API_KEY}"
     try:
-        tweets = client.search_recent_tweets(query=query, max_results=50, tweet_fields=["text"])
-        tweet_texts = [tweet.text for tweet in tweets.data] if tweets.data else []
-        print(f"抓取到{len(tweet_texts)}条推文")
-    except tweepy.TooManyRequests:
-        raise HTTPException(status_code=429, detail="Twitter API 请求过多，请稍后再试")
+        response = get(url)
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"Google News API 请求失败: {response.text}")
+        data = response.json()
+        articles = data.get("articles", [])
+        news_texts = [article["title"] + ". " + article.get("description", "") for article in articles]
+        print(f"抓取到{len(news_texts)}条新闻")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取推文失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取新闻失败: {str(e)}")
 
     analyzer = SentimentIntensityAnalyzer()
     results = []
     all_words = []
-    for text in tweet_texts:
+    for text in news_texts:
         score = analyzer.polarity_scores(text)
         results.append(score)
         words = [w.lower() for w in text.split() if w.isalpha()]
@@ -199,7 +201,7 @@ def stock_emotion(keyword: str):
     
     return {
         "keyword": keyword,
-        "tweet_count": len(tweet_texts),
+        "news_count": len(news_texts),
         "avg_compound": round(avg_compound, 4),
         "emotion_level": level,
         "suggestion": suggestion,
