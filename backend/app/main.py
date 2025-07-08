@@ -95,7 +95,7 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
         "grossMargins", "operatingMargins", "profitMargins", "returnOnAssets", "returnOnEquity"
     ]
     print("🔧 加载 scaler 中...")
-    scaler = joblib.load("/Users/hlshen/Desktop/Nus_SmartFinView/scaler.pkl")
+    scaler = joblib.load(r"C:\software\Nus_SmartFinView\scaler.pkl")
 
     # 定义模型结构
     class StockRegressor(torch.nn.Module):
@@ -121,7 +121,7 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
         print(features)
 
         # 加载训练集并计算均值
-        df = pd.read_csv("/Users/hlshen/Desktop/Nus_SmartFinView/dataset/training_dataset.csv")
+        df = pd.read_csv(r"C:\software\Nus_SmartFinView\dataset\training_dataset.csv")
         feature_means = df[feature_names].mean(numeric_only=True).to_dict()
 
         # 用均值填补空缺或非法值
@@ -138,7 +138,7 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
 
         # 加载模型
         model = StockRegressor(input_dim=len(feature_names))
-        model.load_state_dict(torch.load("/Users/hlshen/Desktop/Nus_SmartFinView/score_model.pt", map_location='cpu'))
+        model.load_state_dict(torch.load(r"C:\software\Nus_SmartFinView\score_model.pt", map_location='cpu'))
         model.eval()
 
         # 预测
@@ -205,3 +205,4 @@ def stock_emotion(keyword: str):
         "suggestion": suggestion,
         "top_words": [{"word": w, "count": c} for w, c in word_freq]
     }
+
