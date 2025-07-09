@@ -156,6 +156,41 @@ export default function Home() {
             进入分析
           </button>
         </div>
+
+        {/* 投资组合推荐卡片 */}
+        <div
+          onClick={() => navigate('/recommendation')}
+          style={{
+            background: '#fff',
+            padding: '48px 40px',
+            borderRadius: 18,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+            minWidth: 320,
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.2s',
+            border: '2px solid #14b8a6'
+          }}
+        >
+          <h2 style={{ color: '#14b8a6', marginBottom: 24 }}>智能投资组合推荐</h2>
+          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
+            设定偏好，获取AI生成的最优股票组合
+          </div>
+          <button
+            style={{
+              background: '#14b8a6',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '10px 32px',
+              fontSize: 16,
+              cursor: 'pointer'
+            }}
+            onClick={e => { e.stopPropagation(); navigate('/recommendation'); }}
+          >
+            获取推荐
+          </button>
+        </div>
       </div>
     </div>
   );
