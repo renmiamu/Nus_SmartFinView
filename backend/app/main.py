@@ -309,10 +309,7 @@ def generate_recommendation(preference: UserPreference):
         elif preference.risk_tolerance == "high":
             weights = ef.max_sharpe()
         else:
-            weights = ef.nonconvex_objective(
-                lambda w, self: -self.expected_return(w) / self.volatility(w),
-                initial_guess=np.array([1/len(mu)]*len(mu))
-            )
+            weights = ef.efficient_risk(target_volatility=0.30)
 
         cleaned_weights = ef.clean_weights()
         performance = ef.portfolio_performance(verbose=False)
