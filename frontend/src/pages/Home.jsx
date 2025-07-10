@@ -1,197 +1,189 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const menuItems = [
+    { label: 'Basic Info',       path: '/stock' },
+    { label: 'Portfolio Viz',    path: '/portfolio' },
+    { label: 'AI Score',         path: '/score' },
+    { label: 'Sentiment',        path: '/emotion' },
+    { label: 'Recommendations',  path: '/recommendation' }
+  ];
+
+  const [animate, setAnimate] = useState(false);
+  const [pathD, setPathD]     = useState('');
+
+  // 触发入场动画
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimate(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 生成「金融折线」风格随机曲线路径
+  useEffect(() => {
+    const generateCurve = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const segments   = 200;
+      const startY     = h * 0.5;
+      const volatility = h * 0.08; // 波动幅度
+
+      const points = [];
+      let y = startY;
+      for (let i = 0; i <= segments; i++) {
+        const x = (i / segments) * w;
+        y += (Math.random() - 0.5) * volatility;
+        y = Math.max(0, Math.min(h, y));
+        points.push([x, y]);
+      }
+      return points
+        .map(([x, y], i) =>
+          i === 0
+            ? `M${x.toFixed(1)},${y.toFixed(1)}`
+            : `L${x.toFixed(1)},${y.toFixed(1)}`
+        )
+        .join(' ');
+    };
+
+    const update = () => setPathD(generateCurve());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   return (
     <div style={{
+      position: 'relative',
       minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)'
+      background: '#fff',
+      color: '#000',
+      overflow: 'hidden'
     }}>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(1000px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .fadeInUp {
+          animation: fadeInUp 2.5s ease-out forwards;
+        }
+        @keyframes slideInRight {
+          from { transform: translateX(100px); opacity: 0; }
+          to   { transform: translateX(0); opacity: 1; }
+        }
+        .navbar {
+          position: fixed;
+          top: 0;
+          width: 100%;
+          background: #111;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          display: flex;
+          justify-content: center;
+          padding: 16px 0;
+          z-index: 1000;
+        }
+        .nav-item {
+          color: #aaa;
+          margin: 0 24px;
+          font-size: 16px;
+          font-weight: 500;
+          position: relative;
+          padding-bottom: 6px;
+          transition: color 0.3s;
+          cursor: pointer;
+          opacity: 0;
+        }
+        .nav-item:hover { color: #fff; }
+        .nav-item.active { color: #fff; }
+        .nav-item.active::after {
+          content: '';
+          position: absolute;
+          bottom: 0; left: 0;
+          width: 100%; height: 2px;
+          background: #fff;
+        }
+        .footer {
+          position: fixed;
+          bottom: 0; width: 100%;
+          background: #f9f9f9;
+          border-top: 1px solid #eee;
+          text-align: center;
+          padding: 12px 0;
+          color: #777; font-size: 14px;
+          z-index: 1000;
+        }
+        .bg-svg {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          z-index: 1;
+        }
+      `}</style>
+
+      {/* 背景金融折线 */}
+      <svg className="bg-svg" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d={pathD}
+          stroke="#ddd"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      {/* 导航 */}
+      <nav className="navbar">
+        {menuItems.map((item, idx) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <div
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`nav-item${isActive ? ' active' : ''}`}
+              style={{
+                animation: animate
+                  ? `slideInRight 0.6s ease-out forwards ${idx * 0.15}s`
+                  : 'none'
+              }}
+            >
+              {item.label}
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* 标题 */}
       <div style={{
+        position: 'relative',
         display: 'flex',
-        gap: 48,
-        flexWrap: 'wrap'
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        zIndex: 2
       }}>
-        {/* 股票基础信息查询卡片 */}
-        <div
-          onClick={() => navigate('/stock')}
+        <h1
+          className={animate ? 'fadeInUp' : ''}
           style={{
-            background: '#fff',
-            padding: '48px 40px',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            minWidth: 320,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.2s',
-            border: '2px solid #6366f1'
+            fontSize: '72px',
+            fontFamily: '"Times New Roman", Times, serif',
+            margin: 0,
+            color: '#222',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.1)',
+            letterSpacing: '2px'
           }}
         >
-          <h2 style={{ color: '#4f46e5', marginBottom: 24 }}>股票基础信息查询</h2>
-          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
-            输入股票代码，查询实时行情与走势
-          </div>
-          <button
-            style={{
-              background: '#6366f1',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '10px 32px',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
-            onClick={e => { e.stopPropagation(); navigate('/stock'); }}
-          >
-            进入查询
-          </button>
-        </div>
-
-        {/* 投资组合收益可视化卡片 */}
-        <div
-          onClick={() => navigate('/portfolio')}
-          style={{
-            background: '#fff',
-            padding: '48px 40px',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            minWidth: 320,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.2s',
-            border: '2px solid #22d3ee'
-          }}
-        >
-          <h2 style={{ color: '#0ea5e9', marginBottom: 24 }}>投资组合收益可视化</h2>
-          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
-            输入持仓，查看收益分布与盈亏分析
-          </div>
-          <button
-            style={{
-              background: '#22d3ee',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '10px 32px',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
-            onClick={e => { e.stopPropagation(); navigate('/portfolio'); }}
-          >
-            进入组合
-          </button>
-        </div>
-
-        {/* 智能打分卡片 */}
-        <div
-          onClick={() => navigate('/score')}
-          style={{
-            background: '#fff',
-            padding: '48px 40px',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            minWidth: 320,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.2s',
-            border: '2px solid #0ea5e9'
-          }}
-        >
-          <h2 style={{ color: '#0ea5e9', marginBottom: 24 }}>智能打分</h2>
-          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
-            输入股票代码，获取AI预测分数
-          </div>
-          <button
-            style={{
-              background: '#0ea5e9',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '10px 32px',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
-            onClick={e => { e.stopPropagation(); navigate('/score'); }}
-          >
-            进入打分
-          </button>
-        </div>
-
-        {/* 舆情情绪分析卡片 */}
-        <div
-          onClick={() => navigate('/emotion')}
-          style={{
-            background: '#fff',
-            padding: '48px 40px',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            minWidth: 320,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.2s',
-            border: '2px solid #f97316'
-          }}
-        >
-          <h2 style={{ color: '#f97316', marginBottom: 24 }}>舆情情绪分析</h2>
-          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
-            输入关键词，分析社交媒体与新闻情绪倾向
-          </div>
-          <button
-            style={{
-              background: '#f97316',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '10px 32px',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
-            onClick={e => { e.stopPropagation(); navigate('/emotion'); }}
-          >
-            进入分析
-          </button>
-        </div>
-
-        {/* 投资组合推荐卡片 */}
-        <div
-          onClick={() => navigate('/recommendation')}
-          style={{
-            background: '#fff',
-            padding: '48px 40px',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            minWidth: 320,
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'box-shadow 0.2s',
-            border: '2px solid #14b8a6'
-          }}
-        >
-          <h2 style={{ color: '#14b8a6', marginBottom: 24 }}>智能投资组合推荐</h2>
-          <div style={{ color: '#64748b', fontSize: 16, marginBottom: 12 }}>
-            设定偏好，获取AI生成的最优股票组合
-          </div>
-          <button
-            style={{
-              background: '#14b8a6',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '10px 32px',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
-            onClick={e => { e.stopPropagation(); navigate('/recommendation'); }}
-          >
-            获取推荐
-          </button>
-        </div>
+          FinVista
+        </h1>
       </div>
+
+      {/* 底部 */}
+      <footer className="footer">
+        Shen Hongli / Shao Yuxuan / Wang Lingfeng / Liu Shuyu<br />
+        SUSTech / USTC / HUST
+      </footer>
     </div>
   );
 }
