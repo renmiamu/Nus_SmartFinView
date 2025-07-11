@@ -198,11 +198,23 @@ def stock_emotion(keyword: str):
     analyzer = SentimentIntensityAnalyzer()
     results = []
     all_words = []
-    for text in news_texts:
+    news_items = []
+    for article in articles:
+        title = article["title"]
+        desc = article.get("description", "")
+        published = article.get("publishedAt", "")
+        text = title + ". " + desc
         score = analyzer.polarity_scores(text)
         results.append(score)
-        words = [w.lower() for w in text.split() if w.isalpha()]
+        # 修正：用正则提取英文单词，避免 isalpha() 过滤过严
+        words = re.findall(r"[a-zA-Z]+", text.lower())
         all_words.extend(words)
+        news_items.append({
+            "title": title,
+            "description": desc,
+            "publishedAt": published,
+            "compound": score["compound"]
+        })
     word_freq = Counter(all_words).most_common(30)
     avg_compound = sum(r['compound'] for r in results) / len(results) if results else 0
 
@@ -224,11 +236,12 @@ def stock_emotion(keyword: str):
     
     return {
         "keyword": keyword,
-        "news_count": len(news_texts),
+        "news_count": len(news_items),
         "avg_compound": round(avg_compound, 4),
         "emotion_level": level,
         "suggestion": suggestion,
-        "top_words": [{"word": w, "count": c} for w, c in word_freq]
+        "top_words": [{"word": w, "count": c} for w, c in word_freq],
+        "news_items": news_items
     }
 
 # 配置Quandl API（需用户自行注册获取密钥）
