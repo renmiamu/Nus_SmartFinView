@@ -199,6 +199,10 @@ def stock_emotion(keyword: str):
     results = []
     all_words = []
     news_items = []
+    # 英文常见停用词（可根据需要扩展）
+    stopwords = set([
+        'the', 'and', 'for', 'are', 'but', 'not', 'with', 'you', 'all', 'any', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use', 'a', 'an', 'in', 'on', 'at', 'to', 'of', 'by', 'is', 'it', 'as', 'be', 'or', 'if', 'from', 'that', 'this', 'so', 'do', 'no', 'up', 'down', 'off', 'over', 'under', 'then', 'than', 'into', 'about', 'after', 'before', 'because', 'between', 'during', 'through', 'while', 'where', 'when', 'which', 'what', 'whose', 'whom', 'been', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'their', 'there', 'them', 'these', 'those', 'such', 'very', 'just', 'also', 'more', 'most', 'some', 'other', 'only', 'own', 'same', 'each', 'few', 'both', 'many', 'much', 'every', 'any', 'again', 'against', 'once', 'here', 'why', 'how', 'he', 'she', 'they', 'we', 'i', 'me', 'my', 'mine', 'your', 'yours', 'his', 'hers', 'its', 'ours', 'theirs', 'am', 'were', 'being', 'doing', 'having', 'does', 'did', 'done', 'having', 'have', 'had', 'been', 'was', 'is', 'are', 'were', 'do', 'does', 'did', 'has', 'have', 'had', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'
+    ])
     for article in articles:
         title = article["title"]
         desc = article.get("description", "")
@@ -208,6 +212,8 @@ def stock_emotion(keyword: str):
         results.append(score)
         # 修正：用正则提取英文单词，避免 isalpha() 过滤过严
         words = re.findall(r"[a-zA-Z]+", text.lower())
+        # 过滤停用词
+        words = [w for w in words if w not in stopwords]
         all_words.extend(words)
         news_items.append({
             "title": title,

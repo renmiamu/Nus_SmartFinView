@@ -10,6 +10,8 @@ export default function StockEmotion() {
   const [loading, setLoading] = useState(false);
   const [trendData, setTrendData] = useState([]);
   const [wordCloudData, setWordCloudData] = useState([]);
+  const [showTrend, setShowTrend] = useState(false);
+  const [showWordCloud, setShowWordCloud] = useState(false);
 
   const handleEmotion = async () => {
     if (!keyword) return;
@@ -43,23 +45,23 @@ export default function StockEmotion() {
   };
 
   useEffect(() => {
-    axios.get("/stock/emotion?keyword=apple").then((res) => {
-      // 情感趋势线数据
-      const news = res.data.news_items || [];
-      setTrendData(
-        news
-          .filter((item) => item.publishedAt)
-          .map((item) => ({
-            time: item.publishedAt.slice(0, 16).replace("T", " "),
-            compound: item.compound,
-            title: item.title,
-          }))
-      );
-      // 词云数据
-      setWordCloudData(
-        (res.data.top_words || []).map((w) => ({ text: w.word, value: w.count }))
-      );
-    });
+    // 页面初始不请求任何数据，趋势线和词云保持空白
+    // 如需默认关键词可取消注释
+    // axios.get("/stock/emotion?keyword=apple").then((res) => {
+    //   const news = res.data.news_items || [];
+    //   setTrendData(
+    //     news
+    //       .filter((item) => item.publishedAt)
+    //       .map((item) => ({
+    //         time: item.publishedAt.slice(0, 16).replace("T", " "),
+    //         compound: item.compound,
+    //         title: item.title,
+    //       }))
+    //   );
+    //   setWordCloudData(
+    //     (res.data.top_words || []).map((w) => ({ text: w.word, value: w.count }))
+    //   );
+    // });
   }, []);
 
   return (
@@ -162,36 +164,52 @@ export default function StockEmotion() {
         <h2 style={{ marginTop: 40, marginBottom: 16, color: "#f97316" }}>
           新闻情感趋势线
         </h2>
-        <LineChart width={700} height={300} data={trendData}>
-          <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-          <XAxis dataKey="time" tick={{ fontSize: 10 }} />
-          <YAxis domain={[-1, 1]} />
-          <Tooltip />
-          <Line type="monotone" dataKey="compound" stroke="#8884d8" />
-        </LineChart>
+        <button
+          style={{ marginBottom: 16, background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 24px', fontSize: 15, cursor: 'pointer' }}
+          onClick={() => setShowTrend((v) => !v)}
+        >
+          {showTrend ? '隐藏趋势线' : '显示趋势线'}
+        </button>
+        {showTrend && (
+          <LineChart width={700} height={300} data={trendData}>
+            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+            <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+            <YAxis domain={[-1, 1]} />
+            <Tooltip />
+            <Line type="monotone" dataKey="compound" stroke="#8884d8" />
+          </LineChart>
+        )}
 
         <h2 style={{ marginTop: 40, marginBottom: 16, color: "#f97316" }}>
           情感词云图
         </h2>
-        <div style={{ width: 700, height: 350 }}>
-          <ReactECharts
-            option={{
-              series: [
-                {
-                  type: 'wordCloud',
-                  shape: 'circle',
-                  left: 'center',
-                  top: 'center',
-                  width: '100%',
-                  height: '100%',
-                  textStyle: { fontFamily: 'sans-serif' },
-                  data: wordCloudData.map(w => ({ name: w.text, value: w.value })),
-                },
-              ],
-            }}
-            style={{ width: 700, height: 350 }}
-          />
-        </div>
+        <button
+          style={{ marginBottom: 16, background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 24px', fontSize: 15, cursor: 'pointer' }}
+          onClick={() => setShowWordCloud((v) => !v)}
+        >
+          {showWordCloud ? '隐藏词云图' : '显示词云图'}
+        </button>
+        {showWordCloud && (
+          <div style={{ width: 700, height: 350 }}>
+            <ReactECharts
+              option={{
+                series: [
+                  {
+                    type: 'wordCloud',
+                    shape: 'circle',
+                    left: 'center',
+                    top: 'center',
+                    width: '100%',
+                    height: '100%',
+                    textStyle: { fontFamily: 'sans-serif' },
+                    data: wordCloudData.map(w => ({ name: w.text, value: w.value })),
+                  },
+                ],
+              }}
+              style={{ width: 700, height: 350 }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
