@@ -49,7 +49,7 @@ app.add_middleware(
 def stock_basic(ticker: str):
     df = yf.download(ticker, period='1d', interval='1m')
     if df.empty or 'Close' not in df.columns:
-        return {"error": "未找到该股票数据"}
+        return {"error": "Stock data not found"}
 
     latest_price = df['Close'].iloc[-1].item()
     prev_close = yf.Ticker(ticker).info['previousClose']
@@ -85,7 +85,7 @@ def batch_stock_profit(holdings: list[Holding]):
         try:
             df = yf.download(h.ticker, period='1d', interval='1m', progress=False)
             if df.empty or 'Close' not in df.columns:
-                raise ValueError(f"无法获取 {h.ticker} 的数据")
+                raise ValueError(f"Can't get the data of {h.ticker} ")
 
             current_price = df['Close'].dropna().iloc[-1]
             cost = h.shares * h.buy_price
@@ -104,21 +104,21 @@ def batch_stock_profit(holdings: list[Holding]):
                 "return_pct": round(float(return_pct), 2)
             })
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"{h.ticker} 查询失败: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"{h.ticker} Query failed: {str(e)}")
 
     return results
 
 
 
 @app.get("/stock/score")
-def stock_score(ticker: str = Query(..., description="股票代码")):
+def stock_score(ticker: str = Query(..., description="Ticker")):
     # 加载特征名、scaler
     feature_names = [
         "marketCap", "trailingPE", "forwardPE", "priceToBook", "bookValue", "beta",
         "dividendYield", "earningsGrowth", "revenueGrowth", "totalRevenue",
         "grossMargins", "operatingMargins", "profitMargins", "returnOnAssets", "returnOnEquity"
     ]
-    print("🔧 加载 scaler 中...")
+    print("🔧 Loading scaler...")
     scaler = joblib.load("../scaler.pkl")
 
     # 定义模型结构
@@ -176,8 +176,8 @@ def stock_score(ticker: str = Query(..., description="股票代码")):
         }
 
     except Exception as e:
-        print("❌ 出错：", e)
-        raise HTTPException(status_code=400, detail=f"无法获取特征或模型预测失败: {str(e)}")
+        print("❌ Wrong：", e)
+        raise HTTPException(status_code=400, detail=f"Failed to obtain features or model prediction failed: {str(e)}")
     
 
 @app.get("/stock/emotion")
@@ -187,13 +187,13 @@ def stock_emotion(keyword: str):
     try:
         response = get(url)
         if response.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"Google News API 请求失败: {response.text}")
+            raise HTTPException(status_code=500, detail=f"Google News API request failed: {response.text}")
         data = response.json()
         articles = data.get("articles", [])
         news_texts = [article["title"] + ". " + article.get("description", "") for article in articles]
-        print(f"抓取到{len(news_texts)}条新闻")
+        print(f"{len(news_texts)}news have been retrieved")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取新闻失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieved the news: {str(e)}")
 
     analyzer = SentimentIntensityAnalyzer()
     results = []
@@ -226,19 +226,19 @@ def stock_emotion(keyword: str):
 
     if avg_compound >= 0.5:
         level = "Very Positive"
-        suggestion = "🔥 极度正面情绪，市场过热，建议保持谨慎"
+        suggestion = "🔥 Extremely positive sentiment, overheated market, it is recommended to remain cautious."
     elif avg_compound >= 0.15:
         level = "Positive"
-        suggestion = "✅ 偏正面情绪，信心增强，可适当关注买入机会"
+        suggestion = "✅ With a relatively positive sentiment and enhanced confidence, one may appropriately focus on buying opportunities."
     elif avg_compound >= -0.15:
         level = "Neutral"
-        suggestion = "⚖️ 情绪中性，建议观望，等待更明确信号"
+        suggestion = "⚖️ Neutral sentiment. It is recommended to observe and wait for more definite signals."
     elif avg_compound >= -0.5:
         level = "Negative"
-        suggestion = "⚠️ 市场悲观，宜谨慎观望或小仓位试探"
+        suggestion = "⚠️ The market is pessimistic. It is advisable to adopt a cautious approach and either wait and observe or take a small-scale trial."
     else:
         level = "Very Negative"
-        suggestion = "❗ 恐慌情绪显著，关注潜在反转机会"
+        suggestion = "❗ The panic sentiment is significant. One can focus on potential reversal opportunities."
     
     return {
         "keyword": keyword,
@@ -266,7 +266,7 @@ from matplotlib import use as mpl_use
 mpl_use('Agg')  # 设置为非 GUI 后端
 import matplotlib.pyplot as plt
 
-@app.post("/stock/recommendation", description="根据用户偏好生成投资组合推荐")
+@app.post("/stock/recommendation", description="Generate investment portfolio recommendations based on user preferences")
 def generate_recommendation(preference: UserPreference):
     try:
         industry_stocks = {
@@ -300,11 +300,11 @@ def generate_recommendation(preference: UserPreference):
             sp500 = sp500_data['Adj Close'] if 'Adj Close' in sp500_data.columns else sp500_data['Close']
 
         if stock_data.empty or sp500.empty:
-            raise ValueError("获取的数据为空，请检查股票代码或时间范围")
+            raise ValueError("The obtained data is empty. Please check the stock code or the time range.")
 
         returns = stock_data.pct_change().dropna()
         if len(returns) < 2:
-            raise ValueError("数据不足，无法训练模型")
+            raise ValueError("Insufficient data, unable to train the model")
 
         X = returns.shift(1).dropna()
         y = returns.iloc[1:]
@@ -314,7 +314,7 @@ def generate_recommendation(preference: UserPreference):
 
         latest_returns = returns.iloc[-1:].values
         if latest_returns.shape[1] != len(returns.columns):
-            raise ValueError("输入维度不匹配，可能由于数据缺失")
+            raise ValueError("The input dimensions do not match, possibly due to missing data.")
 
         predicted_returns = model.predict(latest_returns)[0]
         expected_returns_dict = dict(zip(returns.columns, predicted_returns))
@@ -376,5 +376,5 @@ def generate_recommendation(preference: UserPreference):
         }
 
     except Exception as e:
-        print("❌ 异常信息：", traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+        print("❌ Exception：", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

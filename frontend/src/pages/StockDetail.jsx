@@ -109,7 +109,7 @@ export default function StockDetail() {
       {/* Content below navbar */}
       <div style={commonContainer}>
         {!data ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#000' }}>加载中...</div>
+          <div style={{ textAlign: 'center', padding: 40, color: '#000' }}>Loading...</div>
         ) : data.error ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#000' }}>{data.error}</div>
         ) : (
@@ -123,15 +123,15 @@ export default function StockDetail() {
             padding: '40px 40px 32px 40px'
           }}>
             <h2 style={{ color: '#000', marginBottom: 32, fontWeight: 700, letterSpacing: 1 }}>
-              {ticker} 股票详情
+              {ticker} Stock Detail
             </h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, marginBottom: 32, color: '#000', fontSize: 18 }}>
-              <div><span style={{ color: '#666' }}>最新价格：</span><span style={{ fontWeight: 600 }}>{data.latest_price}</span></div>
-              <div><span style={{ color: '#666' }}>涨跌幅：</span><span style={{ fontWeight: 600 }}>{data.change_percent.toFixed(2)}%</span></div>
-              <div><span style={{ color: '#666' }}>最新成交量：</span><span style={{ fontWeight: 600 }}>{data.volume}</span></div>
-              <div><span style={{ color: '#666' }}>今日总成交量：</span><span style={{ fontWeight: 600 }}>{data.total_volume}</span></div>
+              <div><span style={{ color: '#666' }}>Latest Price：</span><span style={{ fontWeight: 600 }}>{data.latest_price}</span></div>
+              <div><span style={{ color: '#666' }}>Change Persent：</span><span style={{ fontWeight: 600 }}>{data.change_percent.toFixed(2)}%</span></div>
+              <div><span style={{ color: '#666' }}>Volume：</span><span style={{ fontWeight: 600 }}>{data.volume}</span></div>
+              <div><span style={{ color: '#666' }}>Total Volume：</span><span style={{ fontWeight: 600 }}>{data.total_volume}</span></div>
             </div>
-            <h3 style={{ color: '#000', marginBottom: 16, fontWeight: 500 }}>价格变化趋势</h3>
+            <h3 style={{ color: '#000', marginBottom: 16, fontWeight: 500 }}>Price Trend</h3>
             <div style={{ background: '#fff', borderRadius: 12, padding: 16, border: '1px solid #ddd', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={data.time_series.map((t, i) => ({ time: t, price: data.close_series[i] }))}>

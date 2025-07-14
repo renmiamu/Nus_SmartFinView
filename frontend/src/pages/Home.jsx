@@ -175,7 +175,7 @@ export default function Home() {
             letterSpacing: '2px'
           }}
         >
-          FinVista
+          SmartFinView
         </h1>
       </div>
 
