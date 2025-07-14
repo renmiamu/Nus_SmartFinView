@@ -1,215 +1,162 @@
+// StockEmotion.jsx – Polished Black & White Layout with NavBar
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
+} from "recharts";
 import ReactECharts from 'echarts-for-react';
 import 'echarts-wordcloud';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function StockEmotion() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const menuItems = [
+    { label: 'Basic Info', path: '/stock' },
+    { label: 'Portfolio Viz', path: '/portfolio' },
+    { label: 'AI Score', path: '/score' },
+    { label: 'Sentiment', path: '/emotion' },
+    { label: 'Recommendations', path: '/recommendation' }
+  ];
+
   const [keyword, setKeyword] = useState("");
-  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
   const [trendData, setTrendData] = useState([]);
   const [wordCloudData, setWordCloudData] = useState([]);
   const [showTrend, setShowTrend] = useState(false);
   const [showWordCloud, setShowWordCloud] = useState(false);
+  const [navVisible, setNavVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setNavVisible(true), 300);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleEmotion = async () => {
     if (!keyword) return;
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.get("/stock/emotion", {
-        params: { keyword },
-      });
-      setResult(res.data);
-      // 新增：更新趋势线和词云数据
-      const news = res.data.news_items || [];
-      setTrendData(
-        news
-          .filter((item) => item.publishedAt)
-          .map((item) => ({
-            time: item.publishedAt.slice(0, 16).replace("T", " "),
-            compound: item.compound,
-            title: item.title,
-          }))
-      );
-      setWordCloudData(
-        (res.data.top_words || []).map((w) => ({ text: w.word, value: w.count }))
-      );
+      const { data } = await axios.get('/stock/emotion', { params: { keyword } });
+      setResult(data);
+      const news = data.news_items || [];
+      setTrendData(news.filter(i => i.publishedAt).map(i => ({ time: i.publishedAt.slice(0, 16).replace('T', ' '), compound: i.compound })));
+      setWordCloudData((data.top_words || []).map(w => ({ name: w.word, value: w.count })));
     } catch (e) {
-      setResult({ error: e.response?.data?.detail || "查询失败" });
+      setResult({ error: e.response?.data?.detail || 'Query failed' });
       setTrendData([]);
       setWordCloudData([]);
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    // 页面初始不请求任何数据，趋势线和词云保持空白
-    // 如需默认关键词可取消注释
-    // axios.get("/stock/emotion?keyword=apple").then((res) => {
-    //   const news = res.data.news_items || [];
-    //   setTrendData(
-    //     news
-    //       .filter((item) => item.publishedAt)
-    //       .map((item) => ({
-    //         time: item.publishedAt.slice(0, 16).replace("T", " "),
-    //         compound: item.compound,
-    //         title: item.title,
-    //       }))
-    //   );
-    //   setWordCloudData(
-    //     (res.data.top_words || []).map((w) => ({ text: w.word, value: w.count }))
-    //   );
-    // });
-  }, []);
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          padding: "40px 32px",
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-          minWidth: 360,
-          textAlign: "center",
-        }}
-      >
-        <h2 style={{ marginBottom: 24, color: "#f97316" }}>舆情情绪分析</h2>
-        <input
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="请输入关键词（如 Tesla）"
-          style={{
-            padding: "10px 16px",
-            border: "1px solid #fcd34d",
-            borderRadius: 6,
-            fontSize: 16,
-            outline: "none",
-            width: "80%",
-            marginBottom: 20,
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleEmotion();
-          }}
-        />
-        <br />
-        <button
-          onClick={handleEmotion}
-          style={{
-            background: "#f97316",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "10px 32px",
-            fontSize: 16,
-            cursor: "pointer",
-            marginBottom: 20,
-          }}
-          disabled={loading}
-        >
-          {loading ? "分析中..." : "分析情绪"}
-        </button>
-        {result && (
+    <div style={{ background: '#fff', color: '#000', minHeight: '100vh', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .navbar { position: fixed; top: 0; width: 100%; background: #000; display: flex; justify-content: center; padding: 12px 0; z-index: 1000; }
+        .nav-item { color: #777; margin: 0 20px; font-size: 14px; font-weight: 500; opacity: 0; position: relative; padding-bottom: 4px; cursor: pointer; transition: color .3s; }
+        .nav-item:hover, .nav-item.active { color: #fff; }
+        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #fff; }
+        .btn { background: #000; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 14px; cursor: pointer; }
+        .section { margin: 48px 0; }
+        .card { background: #f4f4f4; padding: 20px 24px; border-radius: 8px; max-width: 640px; margin: 24px auto; text-align: left; line-height: 1.6; }
+      `}</style>
+
+      <nav className="navbar">
+        {menuItems.map((item, idx) => (
           <div
-            style={{
-              marginTop: 24,
-              fontSize: 16,
-              color: result.error ? "#ef4444" : "#374151",
-            }}
-          >
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`nav-item${location.pathname === item.path ? ' active' : ''}`}
+            style={{ animation: navVisible ? `slideInRight 0.5s ease-out forwards ${idx * 0.1}s` : 'none' }}
+          >{item.label}</div>
+        ))}
+      </nav>
+
+      <div style={{ paddingTop: 80, maxWidth: 860, margin: '0 auto', padding: 20 }}>
+        {/* Input Section */}
+        <div className="section" style={{ textAlign: 'center' }}>
+          <h2>Sentiment Analysis</h2>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: 16 }}>
+            <input
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              placeholder="Enter keyword (e.g. Tesla)"
+              style={{ padding: '8px 12px', width: 260, border: '1px solid #000', borderRadius: 4, fontSize: 14 }}
+              onKeyDown={e => e.key === 'Enter' && handleEmotion()}
+            />
+            <button className="btn" onClick={handleEmotion} disabled={loading}>
+              {loading ? 'Loading...' : 'Analyze'}
+            </button>
+          </div>
+        </div>
+
+        {/* Info Card */}
+        {result && (
+          <div className="card">
             {result.error ? (
-              result.error
+              <p style={{ color: '#800' }}>{result.error}</p>
             ) : (
-              <div>
-                <div>
-                  <strong>关键词：</strong>
-                  {result.keyword}
-                </div>
-                <div>
-                  <strong>平均情绪分：</strong>
-                  {result.avg_compound}
-                </div>
-                <div>
-                  <strong>情绪等级：</strong>
-                  {result.emotion_level}
-                </div>
-                <div>
-                  <strong>建议：</strong>
-                  <span style={{ color: "#f97316" }}>{result.suggestion}</span>
-                </div>
-                <div style={{ marginTop: 16, textAlign: "left" }}>
-                  <strong>高频词：</strong>
-                  <ul style={{ paddingLeft: 20 }}>
-                    {result.top_words.slice(0, 10).map(({ word, count }, idx) => (
-                      <li key={idx}>
-                        {word}（{count}）
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <>
+                <p><strong>Keyword:</strong> {result.keyword}</p>
+                <p><strong>Average Score:</strong> {result.avg_compound}</p>
+                <p><strong>Level:</strong> {result.emotion_level}</p>
+                <p><strong>Suggestion:</strong> {result.suggestion}</p>
+                <p><strong>Top Words:</strong> {result.top_words.slice(0, 8).map(w => w.word).join(', ')}</p>
+              </>
             )}
           </div>
         )}
-        <h2 style={{ marginTop: 40, marginBottom: 16, color: "#f97316" }}>
-          新闻情感趋势线
-        </h2>
-        <button
-          style={{ marginBottom: 16, background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 24px', fontSize: 15, cursor: 'pointer' }}
-          onClick={() => setShowTrend((v) => !v)}
-        >
-          {showTrend ? '隐藏趋势线' : '显示趋势线'}
-        </button>
-        {showTrend && (
-          <LineChart width={700} height={300} data={trendData}>
-            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-            <XAxis dataKey="time" tick={{ fontSize: 10 }} />
-            <YAxis domain={[-1, 1]} />
-            <Tooltip />
-            <Line type="monotone" dataKey="compound" stroke="#8884d8" />
-          </LineChart>
-        )}
 
-        <h2 style={{ marginTop: 40, marginBottom: 16, color: "#f97316" }}>
-          情感词云图
-        </h2>
-        <button
-          style={{ marginBottom: 16, background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 24px', fontSize: 15, cursor: 'pointer' }}
-          onClick={() => setShowWordCloud((v) => !v)}
-        >
-          {showWordCloud ? '隐藏词云图' : '显示词云图'}
-        </button>
-        {showWordCloud && (
-          <div style={{ width: 700, height: 350 }}>
-            <ReactECharts
-              option={{
-                series: [
-                  {
+        {/* Trend Section */}
+        <div className="section" style={{ textAlign: 'center' }}>
+          <button className="btn" onClick={() => setShowTrend(v => !v)}>
+            {showTrend ? 'Hide Trend' : 'Show Trend'}
+          </button>
+          {showTrend && trendData.length > 0 && (
+            <div style={{ marginTop: 20, height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={trendData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#000' }} />
+                  <YAxis domain={[-1, 1]} tick={{ fill: '#000' }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="compound" stroke="#000" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Word Cloud Section */}
+        <div className="section" style={{ textAlign: 'center' }}>
+          <button className="btn" onClick={() => setShowWordCloud(v => !v)}>
+            {showWordCloud ? 'Hide Word Cloud' : 'Show Word Cloud'}
+          </button>
+          {showWordCloud && wordCloudData.length > 0 && (
+            <div style={{ marginTop: 20, height: 360 }}>
+              <ReactECharts
+                option={{
+                  series: [{
                     type: 'wordCloud',
-                    shape: 'circle',
                     left: 'center',
                     top: 'center',
                     width: '100%',
                     height: '100%',
-                    textStyle: { fontFamily: 'sans-serif' },
-                    data: wordCloudData.map(w => ({ name: w.text, value: w.value })),
-                  },
-                ],
-              }}
-              style={{ width: 700, height: 350 }}
-            />
-          </div>
-        )}
+                    textStyle: { color: '#000' },
+                    data: wordCloudData
+                  }]
+                }}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

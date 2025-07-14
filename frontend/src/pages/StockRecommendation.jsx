@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+// StockRecommendation.jsx – Black & White Theme with NavBar
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function StockRecommendation() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const menuItems = [
+    { label: 'Basic Info', path: '/stock' },
+    { label: 'Portfolio Viz', path: '/portfolio' },
+    { label: 'AI Score', path: '/score' },
+    { label: 'Sentiment', path: '/emotion' },
+    { label: 'Recommendations', path: '/recommendation' }
+  ];
+
   const [form, setForm] = useState({
     risk_tolerance: 'medium',
     industry_preference: [],
@@ -10,8 +22,14 @@ export default function StockRecommendation() {
   });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [navVisible, setNavVisible] = useState(false);
 
   const industries = ['Technology', 'Healthcare', 'Finance', 'Energy'];
+
+  useEffect(() => {
+    const timer = setTimeout(() => setNavVisible(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.investment_amount) return;
@@ -21,7 +39,7 @@ export default function StockRecommendation() {
       const res = await axios.post('http://localhost:8000/stock/recommendation', form);
       setResult(res.data);
     } catch (e) {
-      setResult({ error: e.response?.data?.detail || '请求失败' });
+      setResult({ error: e.response?.data?.detail || 'Query failed' });
     }
     setLoading(false);
   };
@@ -39,49 +57,58 @@ export default function StockRecommendation() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)',
-      padding: 40
-    }}>
-      <div style={{
-        background: '#fff',
-        padding: 40,
-        borderRadius: 16,
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-        maxWidth: 720,
-        width: '100%'
-      }}>
-        <h2 style={{ color: '#14b8a6', marginBottom: 24 }}>智能投资组合推荐</h2>
+    <div style={{ minHeight: '100vh', background: '#fff', color: '#000', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .navbar { position: fixed; top: 0; width: 100%; background: #000; display: flex; justify-content: center; padding: 12px 0; z-index: 1000; }
+        .nav-item { color: #777; margin: 0 24px; font-size: 14px; font-weight: 500; opacity: 0; position: relative; padding-bottom: 4px; cursor: pointer; transition: color .3s; }
+        .nav-item:hover, .nav-item.active { color: #fff; }
+        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #fff; }
+        .card { background: #f9f9f9; padding: 24px; border-radius: 8px; max-width: 720px; margin: 100px auto 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .btn { background: #000; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 16px; cursor: pointer; }
+      `}</style>
+      <nav className="navbar">
+        {menuItems.map((item, idx) => (
+          <div
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`nav-item${location.pathname === item.path ? ' active' : ''}`}
+            style={{ animation: navVisible ? `slideInRight 0.6s ease-out forwards ${idx * 0.15}s` : 'none' }}
+          >{item.label}</div>
+        ))}
+      </nav>
+
+      <div className="card">
+        <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Portfolio Recommendation</h2>
 
         <div style={{ marginBottom: 16 }}>
-          <label>投资金额（美元）：</label><br />
+          <label>Investment Amount (USD):</label><br />
           <input
             type="number"
             value={form.investment_amount}
             onChange={e => setForm({ ...form, investment_amount: parseFloat(e.target.value) || '' })}
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', width: '60%' }}
+            style={{ padding: 8, borderRadius: 6, border: '1px solid #000', width: '60%' }}
           />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>风险偏好：</label><br />
+          <label>Risk Tolerance:</label><br />
           <select
             value={form.risk_tolerance}
             onChange={e => setForm({ ...form, risk_tolerance: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc' }}
+            style={{ padding: 8, borderRadius: 6, border: '1px solid #000' }}
           >
-            <option value="low">低</option>
-            <option value="medium">中</option>
-            <option value="high">高</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
           </select>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>行业偏好：</label><br />
+          <label>Industry Preferences:</label><br />
           {industries.map(ind => (
             <label key={ind} style={{ marginRight: 16 }}>
               <input
@@ -93,46 +120,34 @@ export default function StockRecommendation() {
           ))}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            background: '#14b8a6',
-            color: '#fff',
-            padding: '10px 24px',
-            borderRadius: 6,
-            fontSize: 16,
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          {loading ? '生成中...' : '生成推荐'}
+        <button className="btn" onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Loading...' : 'Generate Recommendations'}
         </button>
 
         {result && (
           <div style={{ marginTop: 32 }}>
             {result.error ? (
-              <div style={{ color: '#ef4444' }}>{result.error}</div>
+              <div style={{ color: '#800' }}>{result.error}</div>
             ) : (
               <div>
-                <h3 style={{ color: '#334155', marginBottom: 12 }}>推荐资产及权重：</h3>
+                <h3 style={{ marginBottom: 12 }}>Recommended Assets & Weights:</h3>
                 <ul>
                   {result.recommended_assets.map(({ ticker, weight }, idx) => (
                     <li key={idx}>{ticker} - {weight}%</li>
                   ))}
                 </ul>
 
-                <h3 style={{ color: '#334155', marginTop: 24 }}>风险指标：</h3>
-                <p>预期年化收益率：{result.performance_metrics.expected_annual_return}%</p>
-                <p>年化波动率：{result.performance_metrics.expected_annual_volatility}%</p>
-                <p>夏普比率：{result.performance_metrics.sharpe_ratio}</p>
-                <p>最大回撤：{result.performance_metrics.max_drawdown}</p>
+                <h3 style={{ marginTop: 24 }}>Risk Metrics:</h3>
+                <p>Expected Return: {result.performance_metrics.expected_annual_return}%</p>
+                <p>Volatility: {result.performance_metrics.expected_annual_volatility}%</p>
+                <p>Sharpe Ratio: {result.performance_metrics.sharpe_ratio}</p>
+                <p>Max Drawdown: {result.performance_metrics.max_drawdown}</p>
 
-                <h3 style={{ color: '#334155', marginTop: 24 }}>回测图表：</h3>
+                <h3 style={{ marginTop: 24 }}>Backtest Chart:</h3>
                 <img
                   src={`data:image/png;base64,${result.backtest_chart}`}
-                  alt="backtest chart"
-                  style={{ maxWidth: '100%', borderRadius: 8, border: '1px solid #ccc' }}
+                  alt="backtest"
+                  style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid #000' }}
                 />
               </div>
             )}
