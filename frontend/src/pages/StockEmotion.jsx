@@ -27,6 +27,7 @@ export default function StockEmotion() {
   const [showTrend, setShowTrend] = useState(false);
   const [showWordCloud, setShowWordCloud] = useState(false);
   const [navVisible, setNavVisible] = useState(false);
+  const [trendType, setTrendType] = useState('compound'); // compound/compound_vader/compound_bert
 
   useEffect(() => {
     const t = setTimeout(() => setNavVisible(true), 300);
@@ -41,7 +42,12 @@ export default function StockEmotion() {
       const { data } = await axios.get('/stock/emotion', { params: { keyword } });
       setResult(data);
       const news = data.news_items || [];
-      setTrendData(news.filter(i => i.publishedAt).map(i => ({ time: i.publishedAt.slice(0, 16).replace('T', ' '), compound: i.compound })));
+      setTrendData(news.filter(i => i.publishedAt).map(i => ({
+        time: i.publishedAt.slice(0, 16).replace('T', ' '),
+        compound: i.compound !== undefined ? i.compound : (i.compound_vader + i.compound_bert) / 2,
+        compound_vader: i.compound_vader,
+        compound_bert: i.compound_bert
+      })));
       setWordCloudData((data.top_words || []).map(w => ({ name: w.word, value: w.count })));
     } catch (e) {
       setResult({ error: e.response?.data?.detail || 'Query failed' });
@@ -104,7 +110,9 @@ export default function StockEmotion() {
             ) : (
               <>
                 <p><strong>Keyword:</strong> {result.keyword}</p>
-                <p><strong>Average Score:</strong> {result.avg_compound}</p>
+                <p><strong>Average Score (Fusion):</strong> {result.avg_compound}</p>
+                <p><strong>Average VADER:</strong> {result.avg_compound_vader}</p>
+                <p><strong>Average BERT:</strong> {result.avg_compound_bert}</p>
                 <p><strong>Level:</strong> {result.emotion_level}</p>
                 <p><strong>Suggestion:</strong> {result.suggestion}</p>
                 <p><strong>Top Words:</strong> {result.top_words.slice(0, 8).map(w => w.word).join(', ')}</p>
@@ -119,17 +127,27 @@ export default function StockEmotion() {
             {showTrend ? 'Hide Trend' : 'Show Trend'}
           </button>
           {showTrend && trendData.length > 0 && (
-            <div style={{ marginTop: 20, height: 300 }}>
-              <ResponsiveContainer>
-                <LineChart data={trendData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#000' }} />
-                  <YAxis domain={[-1, 1]} tick={{ fill: '#000' }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="compound" stroke="#000" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div style={{ margin: '16px 0' }}>
+                <span style={{ marginRight: 8 }}>Trend Type:</span>
+                <select value={trendType} onChange={e => setTrendType(e.target.value)} style={{ padding: '4px 8px', fontSize: 14 }}>
+                  <option value="compound">Fusion</option>
+                  <option value="compound_vader">VADER</option>
+                  <option value="compound_bert">BERT</option>
+                </select>
+              </div>
+              <div style={{ marginTop: 10, height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={trendData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#000' }} />
+                    <YAxis domain={[-1, 1]} tick={{ fill: '#000' }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey={trendType} stroke="#000" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
           )}
         </div>
 

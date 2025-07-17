@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pandas
+yfinance
+pydantic
+torch
+joblib
+numpy
+tweepy
+vaderSentiment
+requests
+quandl
+scikit-learn
+matplotlib
+transformers
+torchvision
+sentencepiece

@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import numpy as np
 import pandas as pd
 import yfinance as yf
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 import torch
 import joblib
-import numpy as np
 import tweepy
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from collections import Counter
@@ -21,20 +21,9 @@ import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 from datetime import datetime, timedelta
-import yfinance as yf
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import numpy as np
-import pandas as pd
 import traceback
-import torch
-import joblib
-import tweepy
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from collections import Counter
-import re
-
+from transformers import pipeline
+import string
 
 app = FastAPI()
 app.add_middleware(
@@ -180,6 +169,30 @@ def stock_score(ticker: str = Query(..., description="Ticker")):
         raise HTTPException(status_code=400, detail=f"Failed to obtain features or model prediction failed: {str(e)}")
     
 
+# 自定义VADER词典（金融领域示例，可扩展）
+CUSTOM_VADER_LEXICON = {
+    'bullish': 2.0,
+    'bearish': -2.0,
+    'overvalued': -1.5,
+    'undervalued': 1.5,
+    'upgrade': 1.2,
+    'downgrade': -1.2,
+    'profit warning': -2.0,
+    'record high': 1.8,
+    'record low': -1.8,
+    'missed estimates': -1.5,
+    'beats estimates': 1.5,
+    'dividend cut': -1.5,
+    'dividend increase': 1.5,
+}
+
+def preprocess_text(text):
+    # 去除特殊符号、统一小写、去除多余空格
+    text = text.lower()
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
 @app.get("/stock/emotion")
 def stock_emotion(keyword: str):
     API_KEY = "e33e6d925ce416416e1ee5b44ce8c7b9"
@@ -195,34 +208,53 @@ def stock_emotion(keyword: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieved the news: {str(e)}")
 
+    # 初始化VADER，加载自定义词典
     analyzer = SentimentIntensityAnalyzer()
+    analyzer.lexicon.update(CUSTOM_VADER_LEXICON)
+
+    # 初始化BERT情感分析pipeline
+    bert_sentiment = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
+
     results = []
     all_words = []
     news_items = []
-    # 英文常见停用词（可根据需要扩展）
     stopwords = set([
-        'the', 'and', 'for', 'are', 'but', 'not', 'with', 'you', 'all', 'any', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use', 'a', 'an', 'in', 'on', 'at', 'to', 'of', 'by', 'is', 'it', 'as', 'be', 'or', 'if', 'from', 'that', 'this', 'so', 'do', 'no', 'up', 'down', 'off', 'over', 'under', 'then', 'than', 'into', 'about', 'after', 'before', 'because', 'between', 'during', 'through', 'while', 'where', 'when', 'which', 'what', 'whose', 'whom', 'been', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'their', 'there', 'them', 'these', 'those', 'such', 'very', 'just', 'also', 'more', 'most', 'some', 'other', 'only', 'own', 'same', 'each', 'few', 'both', 'many', 'much', 'every', 'any', 'again', 'against', 'once', 'here', 'why', 'how', 'he', 'she', 'they', 'we', 'i', 'me', 'my', 'mine', 'your', 'yours', 'his', 'hers', 'its', 'ours', 'theirs', 'am', 'were', 'being', 'doing', 'having', 'does', 'did', 'done', 'having', 'have', 'had', 'been', 'was', 'is', 'are', 'were', 'do', 'does', 'did', 'has', 'have', 'had', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'
+        's', 'y', 'the', 'and', 'for', 'are', 'but', 'not', 'with', 'you', 'all', 'any', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use', 'a', 'an', 'in', 'on', 'at', 'to', 'of', 'by', 'is', 'it', 'as', 'be', 'or', 'if', 'from', 'that', 'this', 'so', 'do', 'no', 'up', 'down', 'off', 'over', 'under', 'then', 'than', 'into', 'about', 'after', 'before', 'because', 'between', 'during', 'through', 'while', 'where', 'when', 'which', 'what', 'whose', 'whom', 'been', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'their', 'there', 'them', 'these', 'those', 'such', 'very', 'just', 'also', 'more', 'most', 'some', 'other', 'only', 'own', 'same', 'each', 'few', 'both', 'many', 'much', 'every', 'any', 'again', 'against', 'once', 'here', 'why', 'how', 'he', 'she', 'they', 'we', 'i', 'me', 'my', 'mine', 'your', 'yours', 'his', 'hers', 'its', 'ours', 'theirs', 'am', 'were', 'being', 'doing', 'having', 'does', 'did', 'done', 'having', 'have', 'had', 'been', 'was', 'is', 'are', 'were', 'do', 'does', 'did', 'has', 'have', 'had', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'
     ])
     for article in articles:
         title = article["title"]
         desc = article.get("description", "")
         published = article.get("publishedAt", "")
         text = title + ". " + desc
-        score = analyzer.polarity_scores(text)
-        results.append(score)
-        # 修正：用正则提取英文单词，避免 isalpha() 过滤过严
-        words = re.findall(r"[a-zA-Z]+", text.lower())
-        # 过滤停用词
+        pre_text = preprocess_text(text)
+        # VADER分数
+        vader_score = analyzer.polarity_scores(pre_text)
+        # BERT分数（返回label和score，label为1-5 star(s)，5星最正面）
+        bert_result = bert_sentiment(pre_text[:512])[0]  # BERT输入最长512字符
+        bert_label = bert_result['label']
+        match = re.search(r"([1-5])", bert_label)
+        if match:
+            bert_compound = (int(match.group(1)) - 3) / 2  # 1星-1, 3星0, 5星1
+        else:
+            bert_compound = 0
+        results.append({"vader": vader_score, "bert": bert_compound})
+        # 分词与停用词过滤
+        words = re.findall(r"[a-zA-Z]+", pre_text)
         words = [w for w in words if w not in stopwords]
         all_words.extend(words)
         news_items.append({
             "title": title,
             "description": desc,
             "publishedAt": published,
-            "compound": score["compound"]
+            "compound_vader": vader_score["compound"],
+            "compound_bert": bert_compound
         })
     word_freq = Counter(all_words).most_common(30)
-    avg_compound = sum(r['compound'] for r in results) / len(results) if results else 0
+    avg_compound_vader = sum(r['vader']['compound'] for r in results) / len(results) if results else 0
+    avg_compound_bert = sum(r['bert'] for r in results) / len(results) if results else 0
+
+    # 综合情感分（可加权平均，这里简单平均）
+    avg_compound = (avg_compound_vader + avg_compound_bert) / 2
 
     if avg_compound >= 0.5:
         level = "Very Positive"
@@ -244,6 +276,8 @@ def stock_emotion(keyword: str):
         "keyword": keyword,
         "news_count": len(news_items),
         "avg_compound": round(avg_compound, 4),
+        "avg_compound_vader": round(avg_compound_vader, 4),
+        "avg_compound_bert": round(avg_compound_bert, 4),
         "emotion_level": level,
         "suggestion": suggestion,
         "top_words": [{"word": w, "count": c} for w, c in word_freq],
