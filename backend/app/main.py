@@ -110,19 +110,29 @@ def stock_score(ticker: str = Query(..., description="Ticker")):
     print("🔧 Loading scaler...")
     scaler = joblib.load("../scaler.pkl")
 
-    # 定义模型结构
     class StockRegressor(torch.nn.Module):
         def __init__(self, input_dim):
             super().__init__()
             self.net = torch.nn.Sequential(
-                torch.nn.Linear(input_dim, 64),
+                torch.nn.Linear(input_dim, 128),
+                torch.nn.BatchNorm1d(128),
                 torch.nn.ReLU(),
+                torch.nn.Dropout(0.3),
+                
+                torch.nn.Linear(128, 64),
+                torch.nn.BatchNorm1d(64),
+                torch.nn.ReLU(),
+                torch.nn.Dropout(0.3),
+                
                 torch.nn.Linear(64, 32),
                 torch.nn.ReLU(),
+                
                 torch.nn.Linear(32, 1)
             )
+            
         def forward(self, x):
             return self.net(x)
+
 
     try:
         info = yf.Ticker(ticker).info
