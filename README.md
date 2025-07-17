@@ -37,4 +37,4 @@ After that, you can visit the page by going to **http://localhost:3000** in your
 
 The web page is supposed to be like this:
 
-![image-20250717143409324](https://github.com/renmiamu/Nus_SmartFinView/asset/image.png)
+[![image-20250717143409324](https://github.com/renmiamu/Nus_SmartFinView/asset/image.png)](https://github.com/renmiamu/Nus_SmartFinView/blob/main/asset/image.png)
